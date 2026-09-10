@@ -1,0 +1,4 @@
+# Copy to .dev.vars and keep that file private. No credentials are needed while email is off.
+RESEND_API_KEY=
+# Use an address authorized by your Resend account (a bare email address).
+EMAIL_FROM=

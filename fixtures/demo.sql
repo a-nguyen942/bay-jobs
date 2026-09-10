@@ -1,0 +1,7 @@
+-- Fictional, opt-in local data. Re-running this preserves your demo statuses.
+INSERT OR IGNORE INTO jobs (id, canonical_url, title, company, location, source_label, first_found_at, last_seen_at, seen_at, application_status, is_demo) VALUES
+('demo-1', 'https://example.com/jobs/1', 'Software Engineer I', 'Harbor Labs', 'San Francisco, CA', 'Demo company board', strftime('%Y-%m-%dT%H:%M:%fZ','now','-20 minutes'), strftime('%Y-%m-%dT%H:%M:%fZ','now'), NULL, 'considering', 1),
+('demo-2', 'https://example.com/jobs/2', 'Backend Engineer', 'Orchard Systems', 'Sunnyvale, CA', 'Demo company board', strftime('%Y-%m-%dT%H:%M:%fZ','now','-2 hours'), strftime('%Y-%m-%dT%H:%M:%fZ','now'), NULL, 'considering', 1),
+('demo-3', 'https://example.com/jobs/3', 'Frontend Engineer', 'Juniper Studio', 'San Jose, CA', 'Demo GitHub listing', strftime('%Y-%m-%dT%H:%M:%fZ','now','-5 hours'), strftime('%Y-%m-%dT%H:%M:%fZ','now'), NULL, 'considering', 1),
+('demo-4', 'https://example.com/jobs/4', 'Software Engineering Intern', 'Coast Research', 'Palo Alto, CA', 'Demo company board', strftime('%Y-%m-%dT%H:%M:%fZ','now','-1 day'), strftime('%Y-%m-%dT%H:%M:%fZ','now'), strftime('%Y-%m-%dT%H:%M:%fZ','now'), 'applied', 1),
+('demo-5', 'https://example.com/jobs/5', 'Data Engineer', 'Mission Computing', 'San Mateo, CA', 'Demo GitHub listing', strftime('%Y-%m-%dT%H:%M:%fZ','now','-2 days'), strftime('%Y-%m-%dT%H:%M:%fZ','now'), strftime('%Y-%m-%dT%H:%M:%fZ','now'), 'archived', 1);

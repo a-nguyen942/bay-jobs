@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="A simple personal inbox for Bay Area computer science jobs and application tracking." />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Bay Jobs — Your personal job inbox</title>
+    <script type="module" src="/web/main.js"></script>
+  </head>
+  <body>
+    <main>
+      <header class="topbar">
+        <a class="brand" href="/" aria-label="Bay Jobs home"><span class="brand-mark">b.</span> bay jobs</a>
+        <span class="personal">Your personal job inbox</span>
+      </header>
+      <section class="workspace">
+        <div class="heading">
+          <div><p class="eyebrow">SAN FRANCISCO · PENINSULA · SOUTH BAY</p><h1>A little closer to your next role.</h1><p class="subtitle">New opportunities, one quiet place to keep track.</p></div>
+          <div class="heading-actions"><button id="check" class="secondary">Check for new jobs</button><button id="refresh" class="text-button">Refresh inbox ↻</button></div>
+        </div>
+        <div class="monitor-status"><span class="status-dot"></span><span id="monitor">Loading monitor status…</span><span id="notification-summary" class="monitor-note">Notifications off</span><button id="notification-toggle" class="text-button" aria-expanded="false" aria-controls="notification-panel">Settings</button></div>
+        <section id="notification-panel" class="notification-panel" aria-label="Notification settings" hidden>
+          <h2>Email notifications</h2>
+          <p id="email-setup" class="detail-note">Email provider setup is required before enabling delivery. See the notification setup in the project README.</p>
+          <form id="notification-form">
+            <label class="email-enable"><input id="email-enabled" type="checkbox" disabled /> Enable email alerts</label>
+            <label>Email address<input id="email-recipient" type="email" maxlength="254" autocomplete="email" placeholder="you@example.com" /></label>
+            <label>Send schedule<select id="email-cadence"><option value="each_check">After each source check</option><option value="daily">Daily digest</option></select></label>
+            <button id="email-save" class="secondary" type="submit" disabled>Save settings</button>
+          </form>
+          <p class="detail-note">Only new matches discovered while alerts are enabled are queued. The first import from each source stays quiet. Disabling alerts or changing your address cancels unsent emails.</p>
+          <p id="email-schedule" class="detail-note"></p>
+          <p id="email-status" class="detail-note"></p>
+          <p id="notification-message" role="status" hidden></p>
+          <button id="email-retry" class="secondary" hidden>Retry failed emails</button>
+          <details class="email-history"><summary>Recent delivery history</summary><p id="email-history-empty" class="detail-note">No emails queued yet.</p><ul id="email-history"></ul><p class="detail-note">Accepted by provider means the email service accepted the request; it does not confirm inbox delivery. Uncertain emails require checking the provider before any resend.</p></details>
+        </section>
+        <p id="check-result" class="demo-note" role="status" hidden></p>
+        <p id="demo-note" class="demo-note" hidden>Sample listings are labeled “Demo.” They are fictional and let you try the inbox.</p>
+        <div id="source-errors" role="status"></div>
+        <div id="error" class="error" role="alert" hidden><span id="error-message"></span><button id="retry">Retry</button></div>
+        <div class="toolbar">
+          <nav id="views" aria-label="Job views">
+            <button class="tab active" data-view="all" aria-pressed="true">Inbox</button>
+            <button class="tab" data-view="new" aria-pressed="false">Unseen <span id="unseen-count" class="count" hidden></span></button>
+            <button class="tab" data-view="applied" aria-pressed="false">Applied</button>
+            <button class="tab" data-view="archived" aria-pressed="false">Archived</button>
+            <select id="more-views" aria-label="Additional application status views"><option value="" disabled>More statuses</option><option value="considering">Considering</option><option value="interviewing">Interviewing</option><option value="rejected">Rejected</option></select>
+          </nav>
+          <label class="search"><span class="sr-only">Search jobs, companies, or locations</span><input id="search" type="search" maxlength="200" placeholder="Search jobs, companies, locations…" /></label>
+        </div>
+        <div id="inbox" class="inbox">
+          <section id="listing" class="listing" aria-label="Job listings" aria-busy="true">
+            <div class="list-caption"><span id="total" aria-live="polite"></span><span>Newest discovered first</span></div>
+            <div id="empty" class="empty" role="status">Loading your inbox…</div>
+            <div id="table" class="table-scroll" hidden><table><thead><tr><th scope="col">Role / Company</th><th scope="col">Location</th><th scope="col">First found</th><th scope="col">Application</th></tr></thead><tbody id="rows"></tbody></table></div>
+            <nav id="pagination" class="pagination" aria-label="Results pages" hidden><button id="previous-page" class="secondary">Previous</button><span id="page-label" aria-live="polite"></span><button id="next-page" class="secondary">Next</button></nav>
+          </section>
+          <div id="detail-parking" hidden>
+          <section id="detail" class="detail" aria-label="Selected job" hidden>
+            <button id="close" class="close" aria-label="Close job details">×</button>
+            <p id="detail-company" class="eyebrow"></p><h2 id="detail-title"></h2><p id="detail-location" class="subtitle"></p>
+            <dl><div><dt>Source</dt><dd id="detail-source"></dd></div><div><dt>First found</dt><dd id="detail-found"></dd></div><div><dt>Employer posted</dt><dd id="detail-posted"></dd></div></dl>
+            <p id="filtered-note" class="detail-note" hidden>This listing no longer matches the current view. It will leave the list when you close it.</p>
+            <label class="status-label" for="application-status">Application status</label>
+            <select id="application-status"></select>
+            <button id="toggle-seen" class="text-button"></button>
+            <p id="detail-demo" class="detail-note" hidden>This is a fictional sample. A real listing will link to the employer’s application page.</p>
+            <a id="apply" class="primary" target="_blank" rel="noopener noreferrer" hidden>Open application ↗</a>
+            <p class="detail-note">You apply on the employer’s website. Update your application status here afterward.</p>
+          </section>
+          </div>
+        </div>
+        <footer><span>Less searching. More possibilities.</span><span>Built for your Bay Area search.</span></footer>
+        <noscript><p class="error">Enable JavaScript to load your inbox and save application status.</p></noscript>
+      </section>
+    </main>
+  </body>
+</html>

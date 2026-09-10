@@ -1,0 +1,26 @@
+{
+  "name": "bay-jobs",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "start": "vite preview",
+    "db:migrate": "WRANGLER_SEND_METRICS=false WRANGLER_LOG_PATH=.wrangler/logs wrangler d1 migrations apply DB --local",
+    "demo": "WRANGLER_SEND_METRICS=false WRANGLER_LOG_PATH=.wrangler/logs wrangler d1 execute DB --local --file=fixtures/demo.sql",
+    "demo:clear": "WRANGLER_SEND_METRICS=false WRANGLER_LOG_PATH=.wrangler/logs wrangler d1 execute DB --local --command=\"DELETE FROM jobs WHERE is_demo = 1\"",
+    "test": "WRANGLER_SEND_METRICS=false WRANGLER_LOG_PATH=.wrangler/logs node --test tests/*.test.js",
+    "check": "npm run syntaxcheck && npm test",
+    "syntaxcheck": "node scripts/check-syntax.js"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "1.54.4",
+    "@openai/sites-vite-plugin": "0.2.0",
+    "vite": "8.2.2",
+    "wrangler": "4.129.0"
+  },
+  "type": "module"
+}
