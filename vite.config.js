@@ -1,5 +1,6 @@
 import { sites } from '@openai/sites-vite-plugin';
 import { defineConfig } from 'vite';
+import { cloudflareConfig } from './scripts/cloudflare-config.js';
 export default defineConfig(async () => {
     process.env.WRANGLER_WRITE_LOGS ??= 'false';
     process.env.WRANGLER_LOG_PATH ??= '.wrangler/logs';
@@ -13,7 +14,7 @@ export default defineConfig(async () => {
         },
         plugins: [
             sites(),
-            cloudflare({ viteEnvironment: { name: 'server' }, configPath: './wrangler.json' }),
+            cloudflare({ viteEnvironment: { name: 'server' }, configPath: cloudflareConfig() }),
         ],
     };
 });

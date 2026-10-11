@@ -2,3 +2,11 @@
 RESEND_API_KEY=
 # Use an address authorized by your Resend account (a bare email address).
 EMAIL_FROM=
+
+# Optional free-plan aggregator imports. Enable only after confirming free access.
+# Keep these values in secrets, never in config/sources.js or browser code.
+FREE_AGGREGATOR_IMPORTS=false
+ADZUNA_APP_ID=
+ADZUNA_APP_KEY=
+# Shared by Google Jobs and LinkedIn indexed search. Use the Free plan.
+SERPAPI_API_KEY=

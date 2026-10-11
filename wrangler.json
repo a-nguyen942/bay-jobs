@@ -1,6 +1,10 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "bay-jobs",
+  "preview_urls": false,
+  "limits": {
+    "cpu_ms": 500
+  },
   "main": "worker/index.js",
   "compatibility_date": "2026-05-15",
   "compatibility_flags": [
@@ -16,7 +20,7 @@
   ],
   "triggers": {
     "crons": [
-      "*/30 * * * *"
+      "0-46 * * * *"
     ]
   },
   "dev": {

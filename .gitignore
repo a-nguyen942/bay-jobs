@@ -40,3 +40,13 @@ next-env.d.ts
 /.wrangler/
 /outputs/
 /work/
+
+# Private deployment settings, local notes, and generated measurement reports
+/wrangler.production.json
+/toPrompt.txt
+/usage-report.json
+/verification/cpu-safety/*-results.json
+/verification/cpu-safety/REPORT.md
+*.key
+*.p12
+*.pfx

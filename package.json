@@ -7,14 +7,16 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && node scripts/check-public-assets.js",
     "start": "vite preview",
-    "db:migrate": "WRANGLER_SEND_METRICS=false WRANGLER_LOG_PATH=.wrangler/logs wrangler d1 migrations apply DB --local",
-    "demo": "WRANGLER_SEND_METRICS=false WRANGLER_LOG_PATH=.wrangler/logs wrangler d1 execute DB --local --file=fixtures/demo.sql",
-    "demo:clear": "WRANGLER_SEND_METRICS=false WRANGLER_LOG_PATH=.wrangler/logs wrangler d1 execute DB --local --command=\"DELETE FROM jobs WHERE is_demo = 1\"",
+    "db:migrate": "npm run cf -- d1 migrations apply DB --local",
+    "demo": "npm run cf -- d1 execute DB --local --file=fixtures/demo.sql",
+    "demo:clear": "npm run cf -- d1 execute DB --local --command=\"DELETE FROM jobs WHERE is_demo = 1\"",
     "test": "WRANGLER_SEND_METRICS=false WRANGLER_LOG_PATH=.wrangler/logs node --test tests/*.test.js",
     "check": "npm run syntaxcheck && npm test",
-    "syntaxcheck": "node scripts/check-syntax.js"
+    "syntaxcheck": "node scripts/check-syntax.js",
+    "cf": "node scripts/cloudflare.js",
+    "check:privacy": "node scripts/check-repository.js --history"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "1.54.4",
