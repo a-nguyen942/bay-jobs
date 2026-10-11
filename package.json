@@ -6,6 +6,8 @@
     "node": ">=24.0.0"
   },
   "scripts": {
+    "cf": "node scripts/cloudflare.js",
+    "check:privacy": "node scripts/check-repository.js --history",
     "dev": "vite",
     "build": "vite build && node scripts/check-public-assets.js",
     "start": "vite preview",
@@ -15,8 +17,9 @@
     "test": "WRANGLER_SEND_METRICS=false WRANGLER_LOG_PATH=.wrangler/logs node --test tests/*.test.js",
     "check": "npm run syntaxcheck && npm test",
     "syntaxcheck": "node scripts/check-syntax.js",
-    "cf": "node scripts/cloudflare.js",
-    "check:privacy": "node scripts/check-repository.js --history"
+    "measure:usage": "WRANGLER_SEND_METRICS=false WRANGLER_LOG_PATH=.wrangler/logs node scripts/measure-usage.js",
+    "verify:cpu": "WRANGLER_SEND_METRICS=false WRANGLER_LOG_PATH=.wrangler/logs node verification/cpu-safety/run.mjs",
+    "verify:cpu:production": "WRANGLER_SEND_METRICS=false WRANGLER_LOG_PATH=.wrangler/logs node verification/cpu-safety/production.mjs --observe"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "1.54.4",
