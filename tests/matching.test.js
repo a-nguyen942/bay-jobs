@@ -50,3 +50,29 @@ test('Greenhouse aliases and tracking merge only when the job identity agrees', 
     for (const url of ['javascript:alert(1)', 'data:text/html,test', 'https://user:pass@example.com/jobs/123'])
         assert.throws(() => canonicalizeUrl(url));
 });
+
+test('experience and keyword preferences distinguish explicit levels and preserve unknown titles as unspecified', () => {
+    const cases = [['Software Engineering Intern', 'internship'], ['Software Engineer I', 'new_grad'],
+        ['Junior Software Engineer', 'new_grad'], ['Senior Software Engineer', 'experienced'],
+        ['Software Engineer II', 'experienced'], ['Software Engineer', 'unspecified']];
+    for (const [title, level] of cases) {
+        const job = { title, location: 'San Jose, CA' };
+        assert.equal(matchesSearch(job, { ...searchPreferences, experienceLevels: [level] }), true, title);
+        assert.equal(matchesSearch(job, { ...searchPreferences, experienceLevels: [] }), false);
+    }
+    const job = { title: 'Frontend Software Engineer', location: 'San Jose, CA' };
+    assert.equal(matchesSearch(job, { ...searchPreferences, keywords: ['FRONTEND', 'backend'] }), true);
+    assert.equal(matchesSearch(job, { ...searchPreferences, excludedKeywords: ['frontend'] }), false);
+    assert.equal(matchesSearch(job, { ...searchPreferences, keywords: ['backend'] }), false);
+});
+
+test('prepared matcher preserves stateful pattern safety across alternating locations and roles', async () => {
+    const { createMatcher } = await import('../lib/matching.js');
+    const match = createMatcher({ ...searchPreferences, rolePattern: /software engineer/gi,
+        excludedRolePattern: /sales/giy, keywords: ['ENGINEER'] });
+    for (let i = 0; i < 4; i++) {
+        assert.equal(match({ title: 'Software Engineer', location: 'San José, California' }), true);
+        assert.equal(match({ title: 'Software Engineer', location: 'Newark, NJ; Los Angeles, CA' }), false);
+        assert.equal(match({ title: 'Software Engineer Sales', location: 'San Jose, CA' }), false);
+    }
+});

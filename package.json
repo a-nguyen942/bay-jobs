@@ -24,5 +24,8 @@
     "vite": "8.2.2",
     "wrangler": "4.129.0"
   },
-  "type": "module"
+  "type": "module",
+  "dependencies": {
+    "entities": "^8.1.0"
+  }
 }
