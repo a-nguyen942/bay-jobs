@@ -7,6 +7,7 @@ const job = {
     firstFoundAt: '2026-01-01T00:00:00Z', lastSeenAt: '2026-01-01T00:00:00Z',
     postedAt: null, seenAt: null, applicationStatus: 'considering', isDemo: false,
 };
+const finishedScan = report => ({ scan: { token: 'test', total: report.length, nextIndex: report.length, done: true, report } });
 const payload = (jobs = [job]) => ({
     jobs, pagination: { page: 1, pageSize: 50, total: jobs.length, pages: 1 }, summary: { total: jobs.length, unseen: jobs.filter(job => !job.seenAt).length, demo: 0 }, monitor: { sourceCount: 0, lastCheckedAt: null, notificationMode: 'disabled', errors: [] },
 });
@@ -85,26 +86,26 @@ test('manual checking prevents duplicate clicks and refreshes the inbox after im
     assert.equal(inbox.checking, true);
     await inbox.check();
     assert.deepEqual(calls, ['/api/check']);
-    check.resolve(Response.json({ report: [{ sourceId: 'figma', inserted: 1, matched: 3, error: null }] }));
+    check.resolve(Response.json(finishedScan([{ sourceId: 'figma', inserted: 1, matched: 3, error: null }])));
     await checking;
     assert.equal(inbox.checking, false);
-    assert.deepEqual(calls, ['/api/check', '/api/jobs?view=all&q=&page=1']);
+    assert.deepEqual(calls, ['/api/check', '/api/jobs?view=all&q=&page=1&sort=newest&skills=63&skillMode=any&internships=false&hideClosed=false']);
     assert.match(inbox.checkMessage, /1 new job added/);
     assert.equal(inbox.data?.jobs.length, 1);
 });
 test('source failures are visible even when other sources import jobs successfully', async () => {
-    const replies = [Response.json({ report: [
+    const replies = [Response.json(finishedScan([
                 { sourceId: 'healthy', inserted: 1, matched: 1, error: null },
                 { sourceId: 'failed', inserted: 0, matched: 0, error: 'HTTP 503' },
-            ] }), Response.json(payload())];
+            ])), Response.json(payload())];
     const inbox = createInbox(() => { }, async () => replies.shift());
     await inbox.check();
-    assert.match(inbox.error, /1 source check\(s\) failed/);
+    assert.match(inbox.error, /Failed sources: failed/);
     assert.match(inbox.checkMessage, /1 new job added/);
     assert.equal(inbox.checking, false);
 });
 test('a check conflict is actionable and the button can be retried after failure', async () => {
-    const replies = [new Response(null, { status: 409 }), Response.json({ report: [] }), Response.json(payload())];
+    const replies = [new Response(null, { status: 409 }), Response.json(finishedScan([])), Response.json(payload())];
     const inbox = createInbox(() => { }, async () => replies.shift());
     await inbox.check();
     assert.match(inbox.error, /already running/);
@@ -117,7 +118,7 @@ test('finishing an import during a status write refreshes after the write settle
     const saving = deferred();
     const other = { ...job, id: 'new-job' };
     const replies = [Promise.resolve(Response.json(payload())), saving.promise,
-        Promise.resolve(Response.json({ report: [{ sourceId: 'figma', inserted: 1, matched: 2, error: null }] })),
+        Promise.resolve(Response.json(finishedScan([{ sourceId: 'figma', inserted: 1, matched: 2, error: null }]))),
         Promise.resolve(Response.json(payload([{ ...job, applicationStatus: 'applied' }, other]))),
     ];
     const inbox = createInbox(() => { }, async () => replies.shift());
@@ -143,7 +144,7 @@ test('changing filters resets the page and ignores an older response', async () 
     await inbox.navigate({ view: 'applied', query: 'Example' });
     old.resolve(Response.json(payload()));
     await previous;
-    assert.deepEqual(paths, ['/api/jobs?view=all&q=&page=3', '/api/jobs?view=applied&q=Example&page=1']);
+    assert.deepEqual(paths, ['/api/jobs?view=all&q=&page=3&sort=newest&skills=63&skillMode=any&internships=false&hideClosed=false', '/api/jobs?view=applied&q=Example&page=1&sort=newest&skills=63&skillMode=any&internships=false&hideClosed=false']);
     assert.equal(inbox.filters.page, 1);
     assert.equal(inbox.data?.jobs[0].applicationStatus, 'applied');
     assert.equal(inbox.loading, false);
@@ -174,4 +175,65 @@ test('a failed write during refresh does not leave page controls stuck loading',
     await refreshing;
     assert.equal(inbox.loading, false);
     assert.match(inbox.error, /not saved/);
+});
+
+test('changing skill filters resets pagination and sends the complete ranking query', async () => {
+    const urls = [];
+    const inbox = createInbox(() => {}, async url => { urls.push(url); return Response.json(payload()); });
+    await inbox.navigate({ page: 3 });
+    await inbox.navigate({ skills: 7, sort: 'importance', skillMode: 'all', internships: true });
+    const query = new URL(urls.at(-1), 'http://localhost').searchParams;
+    assert.equal(query.get('page'), '1');
+    assert.equal(query.get('skills'), '7');
+    assert.equal(query.get('sort'), 'importance');
+    assert.equal(query.get('skillMode'), 'all');
+    assert.equal(query.get('internships'), 'true');
+});
+
+test('one click steps through every source serially, reports progress and continues past source failures', async () => {
+    const first = deferred();
+    const calls = [], messages = [];
+    const reports = [
+        { sourceId: 'one', inserted: 1, matched: 1, error: null },
+        { sourceId: 'two', inserted: 0, matched: 0, error: 'offline' },
+        { sourceId: 'three', inserted: 2, matched: 2, error: null },
+    ];
+    let inbox;
+    const state = index => ({ scan: { token: 'scan', total: 3, nextIndex: index, done: index === 3, nextSourceLabel: `Source ${index + 1}`, report: reports.slice(0, index) } });
+    inbox = createInbox(() => messages.push(inbox.checkMessage), async (url, options) => {
+        if (url !== '/api/check') return Response.json(payload());
+        const body = JSON.parse(options.body);
+        calls.push(body);
+        if (body.action === 'start') return Response.json(state(0));
+        if (body.index === 0) return first.promise;
+        return Response.json(state(body.index + 1));
+    });
+    const running = inbox.check();
+    await new Promise(resolve => setTimeout(resolve, 0));
+    assert.equal(calls.length, 2);
+    assert.match(inbox.checkMessage, /Checking 1\/3/);
+    await inbox.check();
+    assert.equal(calls.length, 2);
+    first.resolve(Response.json(state(1)));
+    await running;
+    assert.deepEqual(calls.map(call => call.action === 'start' ? 'start' : call.index), ['start', 0, 1, 2]);
+    assert.ok(messages.some(message => /Checking 2\/3/.test(message)));
+    assert.match(inbox.checkMessage, /3\/3 sources checked · 3 new jobs added · 1 failed/);
+    assert.match(inbox.error, /two/);
+    assert.equal(inbox.checking, false);
+});
+
+test('interrupted manual scan preserves confirmed progress and stops issuing requests', async () => {
+    let step = 0;
+    const inbox = createInbox(() => {}, async (url, options) => {
+        if (url !== '/api/check') return Response.json(payload());
+        const body = JSON.parse(options.body);
+        if (body.action === 'start') return Response.json({ scan: { token: 'scan', total: 3, nextIndex: 0, done: false, report: [] } });
+        if (step++ === 0) return Response.json({ scan: { token: 'scan', total: 3, nextIndex: 1, done: false, report: [{ sourceId: 'one', inserted: 1, error: null }] } });
+        throw new Error('Network unavailable');
+    });
+    await inbox.check();
+    assert.equal(step, 2);
+    assert.match(inbox.checkMessage, /stopped after 1\/3/);
+    assert.equal(inbox.checking, false);
 });

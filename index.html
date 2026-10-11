@@ -1,10 +1,15 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content="A simple personal inbox for Bay Area computer science jobs and application tracking." />
     <meta name="robots" content="noindex, nofollow" />
+    <script>
+      try {
+        document.documentElement.dataset.theme = localStorage.getItem('bay-jobs-theme') === 'light' ? 'light' : 'dark';
+      } catch { /* Night mode also works when browser storage is unavailable. */ }
+    </script>
     <title>Bay Jobs — Your personal job inbox</title>
     <script type="module" src="/web/main.js"></script>
   </head>
@@ -12,30 +17,136 @@
     <main>
       <header class="topbar">
         <a class="brand" href="/" aria-label="Bay Jobs home"><span class="brand-mark">b.</span> bay jobs</a>
-        <span class="personal">Your personal job inbox</span>
+        <div class="topbar-actions"><span class="personal">Your personal job inbox</span><button id="theme-toggle" class="secondary" type="button" aria-pressed="true">Night mode</button></div>
       </header>
       <section class="workspace">
         <div class="heading">
           <div><p class="eyebrow">SAN FRANCISCO · PENINSULA · SOUTH BAY</p><h1>A little closer to your next role.</h1><p class="subtitle">New opportunities, one quiet place to keep track.</p></div>
-          <div class="heading-actions"><button id="check" class="secondary">Check for new jobs</button><button id="refresh" class="text-button">Refresh inbox ↻</button></div>
+          <div class="heading-actions"><button id="check" class="secondary">Check all sources</button><button id="refresh" class="text-button">Refresh inbox ↻</button><span class="detail-note">Manual scan: keep this tab open · five minutes between starts · 10 starts/day (UTC)</span></div>
         </div>
         <div class="monitor-status"><span class="status-dot"></span><span id="monitor">Loading monitor status…</span><span id="notification-summary" class="monitor-note">Notifications off</span><button id="notification-toggle" class="text-button" aria-expanded="false" aria-controls="notification-panel">Settings</button></div>
+        <details class="source-panel" id="cpu-safety-panel">
+          <summary id="cpu-safety-title">CPU safety · loading</summary>
+          <p id="cpu-safety-status" role="status"></p>
+          <p id="cpu-safety-detail" class="detail-note"></p>
+          <p class="detail-note">Each scheduled run and API change reserves its full 500 ms CPU allowance before work starts, including failed attempts. This conservative scan-work estimate covers the last 31 days, rounded up to whole UTC days. It is not measured CPU or an account-wide spending cap. Inbox reads, rejected requests, earlier usage, other Workers, database usage and logs are outside this estimate. Manual scans are limited to 10 starts per UTC day; hourly scans continue when only that manual limit is reached.</p>
+        </details>
+        <section class="scan-summary" aria-labelledby="scan-summary-title">
+          <h2 id="scan-summary-title">This hour’s source scan</h2>
+          <p id="scan-summary-status" role="status">Loading scan progress…</p>
+          <progress id="scan-summary-progress" aria-label="Sources with a completed check this hour" max="1" value="0"></progress>
+          <p id="scan-summary-counts"></p>
+          <p id="scan-summary-detail" class="detail-note"></p>
+          <p class="detail-note"><span id="scan-finish-time">Checks normally finish around :23.</span> Includes automatic and manual checks; each source’s latest completed result is shown. New matches count all automatically discovered listings this hour, regardless of inbox filters. Refreshes every minute while this page is visible.</p>
+        </section>
+        <details id="coverage-panel" class="source-panel">
+          <summary>Daily coverage · Pacific Time</summary>
+          <p class="detail-note">Check which sources ran, what was collected, and where gaps remain. History starts with this update and is retained for eight days. Overdue status is current, even when viewing an earlier date.</p>
+          <div class="skill-controls"><label>Report date<input id="coverage-day" type="date" /></label><button id="coverage-refresh" class="secondary">Refresh report</button></div>
+          <p id="coverage-message" role="status"></p><p id="coverage-totals"></p>
+          <div class="table-scroll"><table><thead><tr><th>Source</th><th>Checks / failed</th><th>Recovered</th><th>Downloaded</th><th>Filtered internships</th><th>New saved</th><th>Health now</th></tr></thead><tbody id="coverage-rows"></tbody></table></div>
+          <p class="detail-note">Downloaded and filtered totals count repeated observations on each fresh download, not unique jobs. Unchanged responses count as checks. Recovered counts successful automatic recovery attempts. The daily email summary also includes the previous day’s coverage.</p>
+        </details>
+        <details id="rejected-panel" class="source-panel">
+          <summary>Filtered-out internships · review queue</summary>
+          <p class="detail-note">Internships rejected by discovery preferences, with the first rejection reason. Kept for seven days after the last recorded observation, including postings that later disappear. Unchanged observations refresh once daily to reduce database usage. Sources may limit which roles they publish. Save a candidate to bypass discovery filters; it may still need Skill filter → Off in the inbox.</p>
+          <div class="skill-controls"><label>Search candidates<input id="rejected-query" type="search" maxlength="200" /></label><label><input id="rejected-broad" type="checkbox" /> Include US-wide, remote, or unspecified locations</label><button id="rejected-refresh" class="secondary">Refresh candidates</button></div>
+          <p id="rejected-message" role="status"></p><ul id="rejected-list" class="safety-list"></ul>
+          <div class="pagination"><button id="rejected-prev" class="secondary">Previous</button><span id="rejected-page"></span><button id="rejected-next" class="secondary">Next</button></div>
+        </details>
+        <details id="backup-panel" class="source-panel">
+          <summary>Backup discovery &amp; independent watchdog</summary>
+          <h3>Overlapping discovery</h3>
+          <p>Direct employer boards, YC’s public SF engineering page, Wellfound’s public SF and San Jose pages, three internship repositories, and Simplify’s new-grad repository run automatically. Matching application URLs share one inbox entry. Asana and Airtable are now included, even when they have no open internships.</p>
+          <p>For postings outside those feeds, turn on native alerts in your own job-board accounts. These subscriptions need your sign-in and are not activated by this app. Save useful results using “Save a listing link” below.</p>
+          <ul><li><a href="https://www.linkedin.com/jobs/search/?keywords=software%20engineer%20intern&amp;location=San%20Francisco%20Bay%20Area" target="_blank" rel="noopener noreferrer">Search LinkedIn internships</a> · <a href="https://www.linkedin.com/help/linkedin/answer/a508396" target="_blank" rel="noopener noreferrer">Turn on job alerts</a></li>
+          <li><a href="https://app.joinhandshake.com/stu/jobs" target="_blank" rel="noopener noreferrer">Search Handshake through your school</a> · save your internship searches and enable account notifications.</li>
+          <li><a href="https://asana.com/jobs/university-recruiting" target="_blank" rel="noopener noreferrer">Asana emerging talent</a> · <a href="https://www.airtable.com/careers" target="_blank" rel="noopener noreferrer">Airtable careers</a></li></ul>
+          <h3>Multi-company discovery</h3>
+          <p>Adzuna, Google Jobs, and LinkedIn indexed-search imports run automatically once their free API credentials are connected. Each search is checked at most once every 26 hours to conserve free-plan requests. Results cover one search page, not every available job. Your discovery filters still apply.</p>
+          <ul id="aggregator-status"><li>Open this panel to load API connection status.</li></ul>
+          <p class="detail-note">To connect, configure free-plan API credentials on the server using the README instructions. This app does not create accounts or purchase credits. Google Jobs and LinkedIn indexed search share a SerpApi key. LinkedIn discovery reads public Google search results, not your LinkedIn account.</p>
+          <ul>
+            <li><a href="https://www.google.com/search?q=software+engineer+internship+San+Francisco+Bay+Area&amp;udm=8" target="_blank" rel="noopener noreferrer">Google Jobs search</a> · automatic imports require SerpApi setup.</li>
+            <li><a href="https://www.adzuna.com/search?what=software&amp;where=San+Francisco%2C+CA" target="_blank" rel="noopener noreferrer">Jobs by Adzuna</a> · automatic imports require Adzuna setup.</li>
+            <li><a href="https://wellfound.com/jobs" target="_blank" rel="noopener noreferrer">Wellfound startup jobs</a> · public SF and San Jose software search pages are checked automatically each hour.</li>
+            <li><a href="https://www.workatastartup.com/" target="_blank" rel="noopener noreferrer">YC Work at a Startup</a> · YC’s public SF engineering listings are checked automatically each hour.</li>
+            <li><a href="https://github.com/SimplifyJobs/New-Grad-Positions" target="_blank" rel="noopener noreferrer">Simplify New Grad</a> · automatically monitored; select New grad / entry level in Search preferences to see matching roles.</li>
+          </ul>
+          <p class="detail-note">Public board pages and search results provide partial coverage and can lag or omit postings. Missing results never mark a saved application closed.</p>
+          <p class="detail-note">Save individual application links using “Save a listing link.” Use the employer’s application URL when available to avoid duplicates.</p>
+          <h3>Independent watchdog</h3>
+          <p>This sends a heartbeat to Healthchecks.io only after every source has a successful check in the current hour. That outside service can alert you even when this app stops running.</p>
+          <ol><li>Create a check on <a href="https://healthchecks.io/" target="_blank" rel="noopener noreferrer">Healthchecks.io</a> using its free plan. Set the period to <strong>1 hour</strong> and grace time to <strong>30 minutes</strong>.</li><li>Enable and verify an email alert destination there.</li><li>Paste its <strong>hc-ping.com</strong> ping URL below. The first heartbeat is sent after a complete hourly scan at the end of the recovery window. Confirm that your check turns green there.</li></ol>
+          <p id="watchdog-status" role="status">Open this panel to load watchdog status.</p>
+          <form id="watchdog-form"><label>Private ping URL<input id="watchdog-url" type="password" autocomplete="off" placeholder="https://hc-ping.com/your-check-id" required /></label><button type="submit" class="secondary">Connect watchdog</button><button id="watchdog-disconnect" type="button" class="text-button">Disconnect</button></form>
+          <p class="detail-note">A connected URL does not confirm that external email alerts are enabled. Configure those in Healthchecks.io. Pause the external check there before disconnecting to avoid a missing-heartbeat alert.</p>
+        </details>
         <section id="notification-panel" class="notification-panel" aria-label="Notification settings" hidden>
           <h2>Email notifications</h2>
           <p id="email-setup" class="detail-note">Email provider setup is required before enabling delivery. See the notification setup in the project README.</p>
           <form id="notification-form">
             <label class="email-enable"><input id="email-enabled" type="checkbox" disabled /> Enable email alerts</label>
             <label>Email address<input id="email-recipient" type="email" maxlength="254" autocomplete="email" placeholder="you@example.com" /></label>
-            <label>Send schedule<select id="email-cadence"><option value="each_check">After each source check</option><option value="daily">Daily digest</option></select></label>
+            <label>Send schedule<select id="email-cadence"><option value="each_check">After each source check</option><option value="daily">Daily summary + follow-ups</option></select></label>
+            <fieldset id="email-skill-settings">
+              <legend>Optional email filters</legend>
+              <label><input id="email-skill-filter" type="checkbox" /> Only email new listings matching these skills</label>
+              <div id="email-skills" class="skill-controls"></div>
+              <label>Skill matching<select id="email-skill-mode"><option value="any">Any selected skill</option><option value="all">All selected skills</option></select></label>
+              <label><input id="email-internships" type="checkbox" /> Internships only (when skill filtering is enabled)</label>
+              <p class="detail-note">These saved email filters are separate from your inbox filters. Changes apply to future discoveries; already queued emails keep their content. Follow-up and deadline reminders are included regardless of skills.</p>
+            </fieldset>
+            <label><input id="email-scan-alerts" type="checkbox" checked /> Email me if an hourly scan is still incomplete after retries</label>
             <button id="email-save" class="secondary" type="submit" disabled>Save settings</button>
           </form>
           <p class="detail-note">Only new matches discovered while alerts are enabled are queued. The first import from each source stays quiet. Disabling alerts or changing your address cancels unsent emails.</p>
+          <p class="detail-note">Daily summaries include up to 50 new matches and 20 overdue or upcoming follow-ups and application deadlines within 7 days. The first summary is due 24 hours after enabling daily mode, then at the next source check. Extra matches stay queued for the next day. No summary is sent when there are no matches or reminders.</p>
           <p id="email-schedule" class="detail-note"></p>
           <p id="email-status" class="detail-note"></p>
           <p id="notification-message" role="status" hidden></p>
           <button id="email-retry" class="secondary" hidden>Retry failed emails</button>
+          <button id="email-test" class="secondary" disabled>Send test email</button>
           <details class="email-history"><summary>Recent delivery history</summary><p id="email-history-empty" class="detail-note">No emails queued yet.</p><ul id="email-history"></ul><p class="detail-note">Accepted by provider means the email service accepted the request; it does not confirm inbox delivery. Uncertain emails require checking the provider before any resend.</p></details>
         </section>
+        <details id="search-preferences" class="source-panel">
+          <summary>Search preferences</summary>
+          <form id="preferences-form">
+            <fieldset id="preferences-fields" disabled>
+              <label for="preference-cities">Bay Area cities (hold Command/Ctrl to select multiple)</label>
+              <select id="preference-cities" multiple size="6"></select>
+              <button id="all-cities" type="button" class="text-button">Select all cities</button>
+              <label><input id="preference-remote" type="checkbox" /> Include remote roles (any location)</label><label><input id="preference-broad" type="checkbox" /> Include US-wide, remote, and unspecified locations in the filtered-out review queue by default</label>
+              <p>Experience levels</p><div id="preference-levels"></div>
+              <label for="preference-keywords">Title includes any of (comma-separated, optional)</label>
+              <input id="preference-keywords" placeholder="frontend, backend, software" maxlength="1619" />
+              <label for="preference-excluded">Title excludes (comma-separated, optional)</label>
+              <input id="preference-excluded" placeholder="manager, principal" maxlength="1619" />
+              <button class="secondary" type="submit">Save search preferences</button>
+            </fieldset>
+          </form>
+          <p class="detail-note">Changes apply to future checks, not saved applications. Broadening filters can discover older listings and queue alerts. Experience is estimated from titles; include “Unspecified level” to retain ambiguous roles. Technical-role and California location checks still apply.</p>
+          <p id="preferences-message" role="status"></p>
+        </details>
+        <details class="source-panel" open>
+          <summary>Source check times · Pacific Time</summary>
+          <p class="detail-note">Each hour: regular checks :00–:22, recovery checks :23–:45, and an incomplete-scan alert check at :46. Recovery checks only fetch sources with failed or missing results, at most once per source per hour. Status refreshes every minute while this page is visible. Use Refresh inbox for the latest status.</p>
+          <p id="source-health-warning" class="health-warning" role="status" hidden></p>
+          <ul id="source-health"><li>Loading sources…</li></ul>
+        </details>
+        <details class="source-panel">
+          <summary>Save a listing link</summary>
+          <p class="detail-note">LinkedIn indexed search imports run automatically when SerpApi is connected. Handshake remains manual. You can also save individual listings below.</p>
+          <form id="import-form">
+            <label>Listing link<input name="url" type="url" required maxlength="2048" placeholder="Paste a LinkedIn, Handshake, or employer job link" /></label>
+            <label>Role<input name="title" required maxlength="200" placeholder="Software Engineer Intern" /></label>
+            <label>Company<input name="company" required maxlength="200" /></label>
+            <label>Location<input name="location" required maxlength="300" placeholder="San Jose, CA" /></label>
+            <button id="import-save" class="secondary" type="submit">Save listing</button>
+          </form>
+          <p class="detail-note">Enter the details from the listing. Saved links are marked seen and do not send an alert. Your explicit saves can include roles outside the automatic search filters.</p>
+          <p id="import-message" role="status" hidden></p>
+        </details>
         <p id="check-result" class="demo-note" role="status" hidden></p>
         <p id="demo-note" class="demo-note" hidden>Sample listings are labeled “Demo.” They are fictional and let you try the inbox.</p>
         <div id="source-errors" role="status"></div>
@@ -44,15 +155,31 @@
           <nav id="views" aria-label="Job views">
             <button class="tab active" data-view="all" aria-pressed="true">Inbox</button>
             <button class="tab" data-view="new" aria-pressed="false">Unseen <span id="unseen-count" class="count" hidden></span></button>
+            <button class="tab" data-view="review" aria-pressed="false">Needs review <span id="review-count" class="count" hidden></span></button>
+            <button class="tab" data-view="seen" aria-pressed="false">Seen</button>
+            <button class="tab" data-view="favorites" aria-pressed="false">★ Favorites</button>
+            <button class="tab" data-view="deadlines" aria-pressed="false">Deadlines</button>
             <button class="tab" data-view="applied" aria-pressed="false">Applied</button>
+            <button class="tab" data-view="follow_up" aria-pressed="false">Follow-ups</button>
             <button class="tab" data-view="archived" aria-pressed="false">Archived</button>
             <select id="more-views" aria-label="Additional application status views"><option value="" disabled>More statuses</option><option value="considering">Considering</option><option value="interviewing">Interviewing</option><option value="rejected">Rejected</option></select>
           </nav>
           <label class="search"><span class="sr-only">Search jobs, companies, or locations</span><input id="search" type="search" maxlength="200" placeholder="Search jobs, companies, locations…" /></label>
         </div>
+        <section class="skill-filters" aria-label="Skills and importance">
+          <div class="skill-controls">
+            <label>Sort by <select id="sort-order"><option value="newest">Newest / follow-up date</option><option value="importance">Importance</option><option value="deadline">Application deadline</option></select></label>
+            <label><input id="hide-closed" type="checkbox" /> Hide possibly closed listings</label>
+            <label><input id="internships-only" type="checkbox" /> Internships only</label>
+            <label>Skill filter <select id="skill-mode"><option value="off">Off — show all skills</option><option value="any" selected>Match any selected</option><option value="all">Match all selected</option></select></label>
+          </div>
+          <fieldset id="skill-choices"><legend>Skills that matter to you</legend></fieldset>
+          <p class="detail-note">Importance puts internships first, then the most selected skill matches, then newest found. Web frameworks include React, Vue, Angular, Next.js, Django, Flask, and others. Tags reflect mentions in available titles and descriptions, not confirmed requirements. Existing listings gain tags as sources are checked; sources without descriptions may have no tags.</p>
+        </section>
+        <p id="review-note" class="demo-note" role="status" hidden>These saved internships have no detected skill tags. Skill filtering is bypassed here; search and the closed-listing filter still apply. Open the employer’s listing to check requirements. This does not include jobs excluded by discovery preferences or sources we do not monitor.</p>
         <div id="inbox" class="inbox">
           <section id="listing" class="listing" aria-label="Job listings" aria-busy="true">
-            <div class="list-caption"><span id="total" aria-live="polite"></span><span>Newest discovered first</span></div>
+            <div class="list-caption"><span id="total" aria-live="polite"></span><span id="listing-order">Newest discovered first</span></div>
             <div id="empty" class="empty" role="status">Loading your inbox…</div>
             <div id="table" class="table-scroll" hidden><table><thead><tr><th scope="col">Role / Company</th><th scope="col">Location</th><th scope="col">First found</th><th scope="col">Application</th></tr></thead><tbody id="rows"></tbody></table></div>
             <nav id="pagination" class="pagination" aria-label="Results pages" hidden><button id="previous-page" class="secondary">Previous</button><span id="page-label" aria-live="polite"></span><button id="next-page" class="secondary">Next</button></nav>
@@ -63,9 +190,22 @@
             <p id="detail-company" class="eyebrow"></p><h2 id="detail-title"></h2><p id="detail-location" class="subtitle"></p>
             <dl><div><dt>Source</dt><dd id="detail-source"></dd></div><div><dt>First found</dt><dd id="detail-found"></dd></div><div><dt>Employer posted</dt><dd id="detail-posted"></dd></div></dl>
             <p id="filtered-note" class="detail-note" hidden>This listing no longer matches the current view. It will leave the list when you close it.</p>
+            <p id="detail-availability" class="detail-note" hidden></p>
+            <h3>Why this matches</h3><p id="match-explanation" class="detail-note"></p>
+            <button id="toggle-favorite" class="secondary" aria-pressed="false">☆ Add to favorites</button>
             <label class="status-label" for="application-status">Application status</label>
             <select id="application-status"></select>
             <button id="toggle-seen" class="text-button"></button>
+            <form id="job-notes-form">
+              <label for="job-notes">Application notes</label>
+              <textarea id="job-notes" rows="4" maxlength="10000" placeholder="Recruiter contact, interview details, or next steps"></textarea>
+              <label for="job-follow-up">Follow-up date</label>
+              <input id="job-follow-up" type="date" min="0001-01-01" max="9999-12-31" />
+              <label for="job-deadline">Application deadline (from the employer’s listing)</label>
+              <input id="job-deadline" type="date" min="0001-01-01" max="9999-12-31" />
+              <button id="job-notes-save" type="submit" class="secondary">Save notes &amp; dates</button>
+              <p id="job-notes-message" class="detail-note" role="status"></p>
+            </form>
             <p id="detail-demo" class="detail-note" hidden>This is a fictional sample. A real listing will link to the employer’s application page.</p>
             <a id="apply" class="primary" target="_blank" rel="noopener noreferrer" hidden>Open application ↗</a>
             <p class="detail-note">You apply on the employer’s website. Update your application status here afterward.</p>

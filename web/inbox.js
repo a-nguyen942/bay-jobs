@@ -1,7 +1,7 @@
 /** Small data controller shared by DOM events and polling. No UI framework. */
 export function createInbox(onChange, request = fetch) {
     let data = null;
-    let filters = { view: 'all', query: '', page: 1 };
+    let filters = { view: 'all', query: '', page: 1, sort: 'newest', skills: 63, skillMode: 'any', internships: false, hideClosed: false };
     let selected = null;
     let loading = false;
     let loadError = '';
@@ -20,7 +20,7 @@ export function createInbox(onChange, request = fetch) {
         get loading() { return loading; },
         select(job) { selected = job; onChange(); },
         async navigate(change) {
-            filters = { ...filters, ...change, page: ('query' in change || 'view' in change) ? 1 : change.page ?? filters.page };
+            filters = { ...filters, ...change, page: Object.keys(change).some(key => key !== 'page') ? 1 : change.page ?? filters.page };
             revision++;
             selected = null;
             data = null;
@@ -43,7 +43,7 @@ export function createInbox(onChange, request = fetch) {
             loading = true;
             onChange();
             try {
-                const params = new URLSearchParams({ view: filters.view, q: filters.query, page: String(filters.page) });
+                const params = new URLSearchParams({ view: filters.view, q: filters.query, page: String(filters.page), sort: filters.sort, skills: String(filters.skills), skillMode: filters.skillMode, internships: String(filters.internships), hideClosed: String(filters.hideClosed) });
                 const response = await request(`/api/jobs?${params}`, { cache: 'no-store' });
                 if (!response.ok)
                     throw new Error('Could not load your inbox. Check that the local database is initialized, then try again.');
@@ -75,26 +75,41 @@ export function createInbox(onChange, request = fetch) {
                 return;
             checking = true;
             checkError = '';
-            checkMessage = 'Checking job sources…';
+            checkMessage = 'Starting scan of all sources… Keep this tab open.';
             onChange();
+            let completed = 0;
+            let total = 0;
             try {
-                const response = await request('/api/check', { method: 'POST' });
-                if (!response.ok) {
-                    if (response.status === 409)
-                        throw new Error('A source check is already running. Try again shortly.');
-                    throw new Error('Could not check sources. Please try again.');
+                const send = async body => {
+                    const response = await request('/api/check', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+                    if (!response.ok) {
+                        let message = '';
+                        try { message = (await response.json()).error; } catch { /* Generic fallback below. */ }
+                        throw new Error(message || (response.status === 409 ? 'A source check is already running. Try again shortly.'
+                            : response.status === 429 ? 'Please wait five minutes between manual scans.' : 'Could not complete the scan. Please try again.'));
+                    }
+                    return (await response.json()).scan;
+                };
+                let scan = await send({ action: 'start' });
+                total = scan.total;
+                while (!scan.done) {
+                    checkMessage = `Checking ${scan.nextIndex + 1}/${scan.total}: ${scan.nextSourceLabel ?? 'next source'}… Keep this tab open.`;
+                    onChange();
+                    scan = await send({ action: 'step', token: scan.token, index: scan.nextIndex });
+                    completed = scan.nextIndex;
+                    const added = scan.report.reduce((count, source) => count + source.inserted, 0);
+                    checkMessage = `${completed}/${total} sources checked · ${added} new jobs added. Keep this tab open.`;
+                    onChange();
+                    if (!scan.done) await this.refresh();
                 }
-                const { report } = await response.json();
-                const added = report.reduce((count, source) => count + source.inserted, 0);
-                const matched = report.reduce((count, source) => count + source.matched, 0);
-                const failures = report.filter(source => source.error);
-                checkMessage = report.length ? `${added} new ${added === 1 ? 'job' : 'jobs'} added · ${matched} matching listings checked.` : 'No job sources configured.';
-                if (failures.length)
-                    checkError = `${failures.length} source check(s) failed. Some listings may be missing; review the source errors and try again.`;
+                const added = scan.report.reduce((count, source) => count + source.inserted, 0);
+                const failures = scan.report.filter(source => source.error);
+                checkMessage = total ? `${total}/${total} sources checked · ${added} new ${added === 1 ? 'job' : 'jobs'} added · ${failures.length} failed.` : 'No job sources configured.';
+                if (failures.length) checkError = `Failed sources: ${failures.map(source => source.sourceId).join(', ')}. Review source status for details.`;
                 await this.refresh();
             }
             catch (error) {
-                checkMessage = '';
+                checkMessage = total ? `Scan stopped after ${completed}/${total} sources. Completed results are saved.` : '';
                 checkError = error instanceof Error ? error.message : 'Could not check sources.';
             }
             finally {
@@ -123,9 +138,11 @@ export function createInbox(onChange, request = fetch) {
                 if (selected?.id === jobId)
                     selected = updated;
                 refreshAfterWrites = true;
+                return true;
             }
             catch (error) {
                 saveError = error instanceof Error ? error.message : 'Your change was not saved.';
+                return false;
             }
             finally {
                 revision++;
