@@ -1,4 +1,27 @@
-/** Public company boards. Edit this list to change coverage; no API keys needed. */
+/** Public boards and selected repositories. No API keys needed. */
 export const sources = [
+    { id: 'yc-public', kind: 'yc' },
+    { id: 'wellfound-sf', kind: 'wellfound', city: 'san-francisco' },
+    { id: 'wellfound-sj', kind: 'wellfound', city: 'san-jose' },
     { id: 'figma', kind: 'greenhouse', company: 'Figma', boardToken: 'figma' },
+    { id: 'stripe', kind: 'greenhouse', company: 'Stripe', boardToken: 'stripe' },
+    { id: 'cloudflare', kind: 'greenhouse', company: 'Cloudflare', boardToken: 'cloudflare' },
+    { id: 'databricks', kind: 'greenhouse', company: 'Databricks', boardToken: 'databricks' },
+    { id: 'notion', kind: 'ashby', company: 'Notion', boardToken: 'notion' },
+    { id: 'ramp', kind: 'ashby', company: 'Ramp', boardToken: 'ramp' },
+    { id: 'zoox', kind: 'lever', company: 'Zoox', boardToken: 'zoox' },
+    { id: 'palantir', kind: 'lever', company: 'Palantir', boardToken: 'palantir' },
+    { id: 'asana', kind: 'greenhouse', company: 'Asana', boardToken: 'asana', internshipsOnly: true },
+    { id: 'airtable', kind: 'greenhouse', company: 'Airtable', boardToken: 'airtable', internshipsOnly: true },
+    // Official employer boards, scoped to technical internships/co-ops.
+    { id: 'roblox', kind: 'greenhouse', company: 'Roblox', boardToken: 'roblox', internshipsOnly: true },
+    { id: 'robinhood', kind: 'greenhouse', company: 'Robinhood', boardToken: 'robinhood', internshipsOnly: true },
+    { id: 'verkada', kind: 'greenhouse', company: 'Verkada', boardToken: 'verkada', internshipsOnly: true },
+    { id: 'scaleai', kind: 'greenhouse', company: 'Scale AI', boardToken: 'scaleai', internshipsOnly: true },
+    { id: 'hpiq', kind: 'greenhouse', company: 'HP IQ', boardToken: 'hpiq', internshipsOnly: true },
+    { id: 'doordash', kind: 'greenhouse', company: 'DoorDash', boardToken: 'doordashusa', internshipsOnly: true },
+    { id: 'github-simplify-newgrad', kind: 'github', owner: 'SimplifyJobs', repo: 'New-Grad-Positions', branch: 'dev', format: 'simplify-newgrad' },
+    { id: 'github-simplify-2027', kind: 'github', owner: 'SimplifyJobs', repo: 'Summer2027-Internships', branch: 'dev', format: 'simplify', term: 'Summer 2027' },
+    { id: 'github-vansh-2027', kind: 'github', owner: 'vanshb03', repo: 'Summer2027-Internships', branch: 'dev', format: 'vansh' },
+    { id: 'github-speedy-2027', kind: 'github', owner: 'speedyapply', repo: '2027-SWE-College-Jobs', branch: 'main', format: 'speedy' },
 ];
