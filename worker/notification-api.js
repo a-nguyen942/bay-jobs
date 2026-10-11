@@ -1,13 +1,20 @@
-import { deliverNotifications, notificationState, saveSettings, retryNotifications, validEmail, NotificationBusyError } from './notifications.js';
+import { tokenKey, emailAddress } from '../lib/text.js';
+import { ALL_SKILLS } from '../lib/skills.js';
+import { deliverNotifications, notificationState, saveSettings, retryNotifications, queueTestEmail, validEmail, NotificationBusyError } from './notifications.js';
 export async function notificationApi(request, env) {
     const retry = new URL(request.url).pathname === '/api/notifications/retry';
-    const allowed = retry ? ['POST'] : ['GET', 'PATCH'];
+    const test = new URL(request.url).pathname === '/api/notifications/test';
+    const allowed = retry || test ? ['POST'] : ['GET', 'PATCH'];
     if (!allowed.includes(request.method))
         return Response.json({ error: 'Method not allowed' }, { status: 405, headers: { Allow: allowed.join(', ') } });
     if (request.method !== 'GET' && request.headers.get('Origin') !== new URL(request.url).origin)
         return Response.json({ error: 'Invalid origin' }, { status: 403 });
     try {
-        if (retry) {
+        if (test) {
+            await queueTestEmail(env);
+            await deliverNotifications(env);
+        }
+        else if (retry) {
             await retryNotifications(env);
             await deliverNotifications(env);
         }
@@ -21,14 +28,22 @@ export async function notificationApi(request, env) {
             }
             if (!body || typeof body !== 'object' || Array.isArray(body))
                 return Response.json({ error: 'Invalid notification settings' }, { status: 400 });
-            const patch = body;
-            if (Object.keys(patch).length !== 3 || Object.keys(patch).some(key => !['enabled', 'recipient', 'cadence'].includes(key)) ||
+            const patch = { ...body };
+            patch.recipient = emailAddress(patch.recipient);
+            patch.cadence = tokenKey(patch.cadence);
+            if ('skillMode' in patch) patch.skillMode = tokenKey(patch.skillMode);
+            if (Object.keys(patch).some(key => !['enabled', 'recipient', 'cadence', 'skillFilter', 'skillMask', 'skillMode', 'internshipsOnly', 'scanAlerts'].includes(key)) ||
+                ('scanAlerts' in patch && typeof patch.scanAlerts !== 'boolean') ||
+                ('skillFilter' in patch && typeof patch.skillFilter !== 'boolean') ||
+                ('internshipsOnly' in patch && typeof patch.internshipsOnly !== 'boolean') ||
+                ('skillMask' in patch && (!Number.isInteger(patch.skillMask) || patch.skillMask < 1 || patch.skillMask > ALL_SKILLS)) ||
+                ('skillMode' in patch && !['any', 'all'].includes(patch.skillMode)) ||
                 typeof patch.enabled !== 'boolean' || typeof patch.recipient !== 'string' ||
                 !['each_check', 'daily'].includes(patch.cadence) ||
                 (patch.recipient !== '' && !validEmail(patch.recipient)) || (patch.enabled && !patch.recipient)) {
                 return Response.json({ error: 'Enter a valid email address and notification schedule.' }, { status: 400 });
             }
-            await saveSettings(env, { enabled: patch.enabled, recipient: patch.recipient, cadence: patch.cadence });
+            await saveSettings(env, patch);
         }
         return Response.json(await notificationState(env), { headers: { 'Cache-Control': 'no-store' } });
     }
